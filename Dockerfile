@@ -1,8 +1,8 @@
 FROM golang:1.11 as build
-WORKDIR /go/src/github.com/harbur/captain
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
-RUN curl https://glide.sh/get | sh
-RUN glide install 
 RUN CGO_ENABLED=0 go build -a -tags netgo -ldflags '-w -extldflags "-static"' -o /captain ./cmd/captain/
 RUN chmod +x /captain
 
