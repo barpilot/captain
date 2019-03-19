@@ -25,6 +25,12 @@ type Options struct {
 	commit_tags  bool
 }
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 var options Options
 
 func handleCmd() {
@@ -169,7 +175,7 @@ func handleCmd() {
 		Short: "Display version",
 		Long:  `Displays the version of Captain.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("v1.1.2")
+			fmt.Println(version)
 		},
 	}
 
