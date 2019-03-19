@@ -1,8 +1,9 @@
 package captain // import "github.com/harbur/captain"
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Test Fixtures
@@ -80,22 +81,4 @@ func TestPurge(t *testing.T) {
 		Config: testConfig,
 	}
 	Purge(buildOpts)
-}
-
-// SelfUpdate Command
-func TestSelfUpdate(t *testing.T) {
-	// First Time Self update
-	SelfUpdate()
-	// Already Installed last version
-	SelfUpdate()
-}
-
-func TestDownloadFile(t *testing.T) {
-	res := downloadFile("/tmp/captain.html", "https://github.com/harbur/captain")
-	assert.Nil(t, res, "captain")
-}
-
-func TestFindLastVersion(t *testing.T) {
-	res := findLastVersion()
-	assert.NotNil(t, res, "Last version exists")
 }
