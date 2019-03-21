@@ -1,6 +1,10 @@
 workflow "Deploy" {
   on = "push"
-  resolves = ["goreleaser"]
+  resolves = [
+    "goreleaser",
+    "is-tag",
+    "Test on Travis CI",
+  ]
 }
 
 action "is-tag" {
@@ -14,5 +18,10 @@ action "goreleaser" {
     "GORELEASER_GITHUB_TOKEN",
   ]
   args = "release"
-  needs = ["is-tag"]
+  needs = ["is-tag","Test on Travis CI"]
+}
+
+action "Test on Travis CI" {
+  uses = "travis-ci/actions@master"
+  secrets = ["TRAVIS_TOKEN"]
 }
