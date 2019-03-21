@@ -25,3 +25,10 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+dockers:
+  - binaries: ["captain"]
+    image_templates:
+      - "barpilot/captain:latest"
+      - "barpilot/captain:{{ .Tag }}"
+      - "barpilot/captain:{{ .Major }}"
+    dockerfile: Dockerfile.goreleaser
