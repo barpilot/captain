@@ -18,12 +18,3 @@ before_install:
 install: true
 
 after_script: git diff --exit-code
-
-# calls goreleaser
-deploy:
-- provider: script
-  skip_cleanup: true
-  script: curl -sL https://git.io/goreleaser | bash
-  on:
-    tags: true
-    condition: $TRAVIS_OS_NAME = linux
