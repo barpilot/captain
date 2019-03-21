@@ -1,3 +1,5 @@
+project_name: captain
+
 env:
   - GO111MODULE=on
 before:
@@ -9,6 +11,7 @@ builds:
     env:
       - CGO_ENABLED=0
 archive:
+  format: binary
   replacements:
     darwin: Darwin
     linux: Linux
@@ -19,6 +22,30 @@ checksum:
   name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
+
+snapcraft:
+  publish: false
+  summary: Software to create fast and easy drum rolls.
+  description: |
+    This is the best drum roll application out there.
+    Install it and awe!
+  grade: devel
+  confinement: devmode
+  apps:
+    captain:
+      plugs: ["home", "docker", "system-files"]
+  plugs:
+    system-files:
+      write: ["/var/run/docker.sock"]
+
+brew:
+  github:
+    owner: barpilot
+    name: homebrew-tap
+  homepage: https://barpilot.io
+  description: "Software to create fast and easy drum rolls."
+  skip_upload: true
+
 changelog:
   sort: asc
   filters:
