@@ -20,7 +20,7 @@ func TestReadConfig(t *testing.T) {
 }
 
 func TestNewConfig(t *testing.T) {
-	info("cwd %s", basedir)
+	pInfo("cwd %s", basedir)
 	c := NewConfig("", basedir+"/test/Simple/captain.yml", false)
 	assert.NotNil(t, c, "Should return captain.yml configuration")
 }

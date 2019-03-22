@@ -14,7 +14,7 @@ func execute(name string, arg ...string) error {
 		command += " " + i
 	}
 
-	debug("Executing %s", command)
+	pDebug("Executing %s", command)
 	cmd := exec.Command(name, arg...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

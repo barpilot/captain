@@ -25,11 +25,11 @@ type BuildArgSet struct {
 }
 
 func buildImage(app App, tag string, force bool) error {
-	info("Building image %s:%s", app.Image, tag)
+	pInfo("Building image %s:%s", app.Image, tag)
 
 	// Nasty issue with CircleCI https://github.com/docker/docker/issues/4897
 	if os.Getenv("CIRCLECI") == "true" {
-		info("Running at %s environment...", "CIRCLECI")
+		pInfo("Running at %s environment...", "CIRCLECI")
 		execute("docker", "build", "-t", app.Image+":"+tag, filepath.Dir(app.Build))
 		return nil
 	}
@@ -76,7 +76,7 @@ func pullImage(image string, version string) error {
 
 func tagImage(app App, origin string, tag string) error {
 	if tag != "" {
-		info("Tagging image %s:%s as %s:%s", app.Image, origin, app.Image, tag)
+		pInfo("Tagging image %s:%s as %s:%s", app.Image, origin, app.Image, tag)
 		opts := docker.TagImageOptions{Repo: app.Image, Tag: tag, Force: true}
 		err := client.TagImage(app.Image+":"+origin, opts)
 		if err != nil {
@@ -85,7 +85,7 @@ func tagImage(app App, origin string, tag string) error {
 		return err
 	}
 
-	debug("Skipping tag of %s - no git repository", app.Image)
+	pDebug("Skipping tag of %s - no git repository", app.Image)
 
 	return nil
 }
@@ -98,7 +98,7 @@ func removeImage(name string) error {
  * Retrieves a list of existing Images for the specific App.
  */
 func getImages(app App) []docker.APIImages {
-	debug("Getting images %s", app.Image)
+	pDebug("Getting images %s", app.Image)
 	imgs, _ := client.ListImages(docker.ListImagesOptions{All: false, Filter: app.Image})
 	return imgs
 }

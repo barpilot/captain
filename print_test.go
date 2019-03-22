@@ -5,15 +5,15 @@ import (
 )
 
 func TestPrintInfo(t *testing.T) {
-	info("test info %s", "message")
+	pInfo("test info %s", "message")
 }
 
 func TestPrintErr(t *testing.T) {
-	err("test err %s", "message")
+	pError("test err %s", "message")
 }
 
 func TestPrintDebug(t *testing.T) {
 	Debug = true
 	defer func() { Debug = false }()
-	debug("test debug %s", "message")
+	pDebug("test debug %s", "message")
 }

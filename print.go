@@ -2,7 +2,7 @@ package captain // import "github.com/harbur/captain"
 
 import "fmt"
 
-func info(text string, arg ...interface{}) {
+func pInfo(text string, arg ...interface{}) {
 	text = colorInfo("[") + colorPrefix("CAPTAIN") + colorInfo("]") + " " + text + "\n"
 	s := arg
 	for i := range s {
@@ -11,7 +11,7 @@ func info(text string, arg ...interface{}) {
 	fmt.Printf(text, arg...)
 }
 
-func err(text string, arg ...interface{}) {
+func pError(text string, arg ...interface{}) {
 	text = colorErr("[") + colorPrefix("CAPTAIN") + colorErr("]") + " " + text + "\n"
 	s := arg
 	for i := range s {
@@ -20,7 +20,7 @@ func err(text string, arg ...interface{}) {
 	fmt.Printf(text, s...)
 }
 
-func debug(text string, arg ...interface{}) {
+func pDebug(text string, arg ...interface{}) {
 	if Debug {
 		text = colorDebug("[") + colorPrefix("CAPTAIN") + colorDebug("]") + " " + text + "\n"
 		s := arg

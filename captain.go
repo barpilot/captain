@@ -1,6 +1,7 @@
 package captain // import "github.com/harbur/captain"
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
@@ -10,14 +11,14 @@ var Debug bool
 
 // StatusError provides error code and id
 type StatusError struct {
-	error  error
+	err    error
 	status int
 }
 
 // Pre function executes commands on pre section before build
 func Pre(app App) error {
 	for _, value := range app.Pre {
-		info("Running pre command: %s", value)
+		pInfo("Running pre command: %s", value)
 		res := execute("bash", "-c", value)
 		if res != nil {
 			return res
@@ -29,7 +30,7 @@ func Pre(app App) error {
 // Post function executes commands on pre section after build
 func Post(app App) error {
 	for _, value := range app.Post {
-		info("Running post command: %s", value)
+		pInfo("Running post command: %s", value)
 		res := execute("bash", "-c", value)
 		if res != nil {
 			return res
@@ -52,18 +53,22 @@ type BuildOptions struct {
 func Build(opts BuildOptions) {
 	config := opts.Config
 
-	var rev = getRevision(opts.Long_sha)
+	rev, err := getRevision(opts.Long_sha)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	// For each App
 	for _, app := range config.GetApps() {
 		// If no Git repo exist
 		if !isGit() {
 			// Perfoming [build latest]
-			debug("No local git repository found, just building latest")
+			pDebug("No local git repository found, just building latest")
 
 			// Execute Pre commands
 			if res := Pre(app); res != nil {
-				err("Pre execution returned non-zero status")
+				pError("Pre execution returned non-zero status")
 				return
 			}
 
@@ -81,13 +86,18 @@ func Build(opts BuildOptions) {
 			// Skip build if there are no local changes and the commit is already built
 			if !isDirty() && imageExist(app, rev) && !opts.Force {
 				// Performing [skip rev|tag rev@latest|tag rev@branch]
-				info("Skipping build of %s:%s - image is already built", app.Image, rev)
+				pInfo("Skipping build of %s:%s - image is already built", app.Image, rev)
 
 				// Tag commit image
 				tagImage(app, rev, "latest")
 
 				// Tag branch image
-				for _, branch := range getBranches(opts.All_branches) {
+				branches, err := getBranches(opts.All_branches)
+				if err != nil {
+					pError(err.Error())
+					return
+				}
+				for _, branch := range branches {
 					res := tagImage(app, rev, branch)
 					if res != nil {
 						os.Exit(TagFailed)
@@ -107,7 +117,7 @@ func Build(opts BuildOptions) {
 
 				// Execute Pre commands
 				if res := Pre(app); res != nil {
-					err("Pre execution returned non-zero status")
+					pError("Pre execution returned non-zero status")
 				}
 
 				// Build latest image
@@ -116,13 +126,18 @@ func Build(opts BuildOptions) {
 					os.Exit(BuildFailed)
 				}
 				if isDirty() {
-					debug("Skipping tag of %s:%s - local changes exist", app.Image, rev)
+					pDebug("Skipping tag of %s:%s - local changes exist", app.Image, rev)
 				} else {
 					// Tag commit image
 					tagImage(app, "latest", rev)
 
 					// Tag branch image
-					for _, branch := range getBranches(opts.All_branches) {
+					branches, err := getBranches(opts.All_branches)
+					if err != nil {
+						pError(err.Error())
+						return
+					}
+					for _, branch := range branches {
 						res := tagImage(app, "latest", branch)
 						if res != nil {
 							os.Exit(TagFailed)
@@ -143,7 +158,7 @@ func Build(opts BuildOptions) {
 
 		// Execute Post commands
 		if res := Post(app); res != nil {
-			err("Post execution returned non-zero status")
+			pError("Post execution returned non-zero status")
 		}
 	}
 }
@@ -154,10 +169,10 @@ func Test(opts BuildOptions) {
 
 	for _, app := range config.GetApps() {
 		for _, value := range app.Test {
-			info("Running test command: %s", value)
+			pInfo("Running test command: %s", value)
 			res := execute("bash", "-c", value)
 			if res != nil {
-				err("Test execution returned non-zero status")
+				pError("Test execution returned non-zero status")
 				os.Exit(ExecuteFailed)
 			}
 		}
@@ -170,52 +185,66 @@ func Push(opts BuildOptions) {
 
 	// If no Git repo exist
 	if !isGit() {
-		err("No local git repository found, cannot push")
+		pError("No local git repository found, cannot push")
 		os.Exit(NoGit)
 	}
 
 	if isDirty() {
-		err("Git repository has local changes, cannot push")
+		pError("Git repository has local changes, cannot push")
 		os.Exit(GitDirty)
 	}
 
 	for _, app := range config.GetApps() {
-		for _, branch := range getBranches(opts.All_branches) {
-			info("Pushing image %s:%s", app.Image, "latest")
+		branches, err := getBranches(opts.All_branches)
+		if err != nil {
+			pError(err.Error())
+			return
+		}
+		for _, branch := range branches {
+			pInfo("Pushing image %s:%s", app.Image, "latest")
 			if res := pushImage(app.Image, "latest"); res != nil {
-				err("Push returned non-zero status")
+				pError("Push returned non-zero status")
 				os.Exit(ExecuteFailed)
 			}
 			if opts.Branch_tags {
-				info("Pushing image %s:%s", app.Image, branch)
+				pInfo("Pushing image %s:%s", app.Image, branch)
 				if res := pushImage(app.Image, branch); res != nil {
-					err("Push returned non-zero status")
+					pError("Push returned non-zero status")
 					os.Exit(ExecuteFailed)
 				}
 			}
 			if opts.Commit_tags {
-				rev := getRevision(opts.Long_sha)
-				info("Pushing image %s:%s", app.Image, rev)
+				rev, err := getRevision(opts.Long_sha)
+				if err != nil {
+					pError(err.Error())
+					return
+				}
+				pInfo("Pushing image %s:%s", app.Image, rev)
 				if res := pushImage(app.Image, rev); res != nil {
-					err("Push returned non-zero status")
+					pError("Push returned non-zero status")
 					os.Exit(ExecuteFailed)
 				}
 			}
 			if opts.Branch_tags && opts.Commit_tags {
-				rev := getRevision(opts.Long_sha)
+				rev, err := getRevision(opts.Long_sha)
+				if err != nil {
+					pError(err.Error())
+					return
+				}
+
 				branchRevTag := branch + "-" + rev
-				info("Pushing image %s:%s", app.Image, branchRevTag)
+				pInfo("Pushing image %s:%s", app.Image, branchRevTag)
 				if res := pushImage(app.Image, branchRevTag); res != nil {
-					err("Push returned non-zero status")
+					pError("Push returned non-zero status")
 					os.Exit(ExecuteFailed)
 				}
 			}
 
 			// Add additional user-defined Tag
 			if opts.Tag != "" {
-				info("Pushing image %s:%s", app.Image, opts.Tag)
+				pInfo("Pushing image %s:%s", app.Image, opts.Tag)
 				if res := pushImage(app.Image, opts.Tag); res != nil {
-					err("Push returned non-zero status")
+					pError("Push returned non-zero status")
 					os.Exit(ExecuteFailed)
 				}
 			}
@@ -228,42 +257,57 @@ func Pull(opts BuildOptions) {
 	config := opts.Config
 
 	for _, app := range config.GetApps() {
-		for _, branch := range getBranches(opts.All_branches) {
-			info("Pulling image %s:%s", app.Image, "latest")
+		branches, err := getBranches(opts.All_branches)
+		if err != nil {
+			pError(err.Error())
+			return
+		}
+		for _, branch := range branches {
+			pInfo("Pulling image %s:%s", app.Image, "latest")
 			if res := pullImage(app.Image, "latest"); res != nil {
-				err("Pull returned non-zero status")
+				pError("Pull returned non-zero status")
 				os.Exit(ExecuteFailed)
 			}
 			if opts.Branch_tags {
-				info("Pulling image %s:%s", app.Image, branch)
+				pInfo("Pulling image %s:%s", app.Image, branch)
 				if res := pullImage(app.Image, branch); res != nil {
-					err("Pull returned non-zero status")
+					pError("Pull returned non-zero status")
 					os.Exit(ExecuteFailed)
 				}
 			}
 			if opts.Commit_tags {
-				rev := getRevision(opts.Long_sha)
-				info("Pulling image %s:%s", app.Image, rev)
+				rev, err := getRevision(opts.Long_sha)
+				if err != nil {
+					pError(err.Error())
+					return
+				}
+
+				pInfo("Pulling image %s:%s", app.Image, rev)
 				if res := pullImage(app.Image, rev); res != nil {
-					err("Pull returned non-zero status")
+					pError("Pull returned non-zero status")
 					os.Exit(ExecuteFailed)
 				}
 			}
 			if opts.Branch_tags && opts.Commit_tags {
-				rev := getRevision(opts.Long_sha)
+				rev, err := getRevision(opts.Long_sha)
+				if err != nil {
+					pError(err.Error())
+					return
+				}
+
 				branchRevTag := branch + "-" + rev
-				info("Pulling image %s:%s", app.Image, branchRevTag)
+				pInfo("Pulling image %s:%s", app.Image, branchRevTag)
 				if res := pullImage(app.Image, branchRevTag); res != nil {
-					err("Pull returned non-zero status")
+					pError("Pull returned non-zero status")
 					os.Exit(ExecuteFailed)
 				}
 			}
 
 			// Add additional user-defined Tag
 			if opts.Tag != "" {
-				info("Pulling image %s:%s", app.Image, opts.Tag)
+				pInfo("Pulling image %s:%s", app.Image, opts.Tag)
 				if res := pullImage(app.Image, opts.Tag); res != nil {
-					err("Pull returned non-zero status")
+					pError("Pull returned non-zero status")
 					os.Exit(ExecuteFailed)
 				}
 			}
@@ -293,13 +337,24 @@ func Purge(opts BuildOptions) {
 
 		// Remove from the list: The current commit-id
 		for key, tag := range tags {
-			if tag == app.Image+":"+getRevision(opts.Long_sha) {
+			rev, err := getRevision(opts.Long_sha)
+			if err != nil {
+				pError(err.Error())
+				return
+			}
+			if tag == app.Image+":"+rev {
 				tags = append(tags[:key], tags[key+1:]...)
 			}
 		}
 
 		// Remove from the list: The working-dir git branches
-		for _, branch := range getBranches(opts.All_branches) {
+		branches, err := getBranches(opts.All_branches)
+		if err != nil {
+			pError(err.Error())
+			return
+		}
+
+		for _, branch := range branches {
 			for key, tag := range tags {
 				if tag == app.Image+":"+branch {
 					tags = append(tags[:key], tags[key+1:]...)
@@ -312,10 +367,10 @@ func Purge(opts BuildOptions) {
 
 		// Proceed with deletion of Images
 		for _, tag := range tags {
-			info("Deleting image %s", tag)
+			pInfo("Deleting image %s", tag)
 			res := removeImage(tag)
 			if res != nil {
-				err("Deleting image failed: %s", res)
+				pError("Deleting image failed: %s", res)
 				os.Exit(DeleteImageFailed)
 			}
 		}

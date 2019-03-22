@@ -95,7 +95,7 @@ func unmarshal(data []byte) *config {
 	var configV1 *configV1
 	res := yaml.Unmarshal(data, &configV1)
 	if len(configV1.Build.Images) > 0 {
-		err("Old %s format detected! Please check the https://github.com/harbur/captain how to upgrade", "captain.yml")
+		pError("Old %s format detected! Please check the https://github.com/harbur/captain how to upgrade", "captain.yml")
 		os.Exit(-1)
 	}
 
@@ -104,7 +104,7 @@ func unmarshal(data []byte) *config {
 
 	if res != nil {
 		res = displaySyntaxError(data, res)
-		err("%s", res)
+		pError("%s", res)
 		os.Exit(InvalidCaptainYML)
 	}
 
@@ -113,7 +113,7 @@ func unmarshal(data []byte) *config {
 
 	if res != nil {
 		res = displaySyntaxError(data, res)
-		err("%s", res)
+		pError("%s", res)
 		os.Exit(InvalidCaptainYML)
 	}
 
@@ -132,7 +132,7 @@ func NewConfig(namespace, path string, forceOrder bool) Config {
 	}
 
 	if conf == nil {
-		info("No configuration found %v - inferring values", configFile(path))
+		pInfo("No configuration found %v - inferring values", configFile(path))
 		autoconf := make(config)
 		conf = &autoconf
 		dockerfiles := getDockerfiles(namespace)
@@ -208,7 +208,7 @@ func visit(namespace string) filepath.WalkFunc {
 			absolutePath, _ := filepath.Abs(path)
 			var image = strings.ToLower(filepath.Base(filepath.Dir(absolutePath)))
 			imagesMap[path] = namespace + "/" + image + strings.ToLower(filepath.Ext(path))
-			debug("Located %s will be used to create %s", path, imagesMap[path])
+			pDebug("Located %s will be used to create %s", path, imagesMap[path])
 		}
 		return nil
 	}
