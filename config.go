@@ -110,7 +110,7 @@ func displaySyntaxError(data []byte, syntaxError error) (err error) {
 // or YAML into a config object.
 func unmarshal(data []byte) *config {
 	var configV1 *configV1
-	yaml.Unmarshal(data, &configV1)
+	_ = yaml.Unmarshal(data, &configV1)
 	if len(configV1.Build.Images) > 0 {
 		pError("Old %s format detected! Please check the https://github.com/harbur/captain how to upgrade", "captain.yml")
 		os.Exit(-1)
