@@ -28,4 +28,6 @@ action "cedrickring/golang-action/go1.12@1.2.0" {
 
 action "docker://golangci/golangci-lint" {
   uses = "docker://golangci/golangci-lint"
+  runs = "/usr/bin/golangci-lint"
+  args = "run"
 }
