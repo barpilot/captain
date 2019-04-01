@@ -113,8 +113,5 @@ func getImages(app App) []docker.APIImages {
 func imageExist(app App, tag string) bool {
 	repo := app.Image + ":" + tag
 	image, _ := client.InspectImage(repo)
-	if image != nil {
-		return true
-	}
-	return false
+	return image != nil
 }
