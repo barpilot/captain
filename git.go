@@ -1,6 +1,7 @@
 package captain // import "github.com/harbur/captain"
 
 import (
+	"fmt"
 	"os"
 
 	git "gopkg.in/src-d/go-git.v4"
@@ -49,8 +50,10 @@ func getBranches(all_branches bool) ([]string, error) {
 		for _, branch := range branches {
 			labels = append(labels, branch)
 		}
-	} else {
+	} else if len(branches) > 0 {
 		labels = append(labels, branches[0])
+	} else {
+		return labels, fmt.Errorf("no branch")
 	}
 
 	tags, err := getCurrentTagsFromRepository(r)
