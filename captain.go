@@ -80,7 +80,10 @@ func Build(opts BuildOptions) {
 
 			// Add additional user-defined Tag
 			if opts.Tag != "" {
-				tagImage(app, "latest", opts.Tag)
+				if err := tagImage(app, "latest", opts.Tag); err != nil {
+					pError(err.Error())
+					return
+			}
 			}
 		} else {
 			// Skip build if there are no local changes and the commit is already built
@@ -89,7 +92,10 @@ func Build(opts BuildOptions) {
 				pInfo("Skipping build of %s:%s - image is already built", app.Image, rev)
 
 				// Tag commit image
-				tagImage(app, rev, "latest")
+				if err := tagImage(app, rev, "latest"); err != nil {
+					pError(err.Error())
+					return
+				}
 
 				// Tag branch image
 				branches, err := getBranches(opts.All_branches)
@@ -110,7 +116,10 @@ func Build(opts BuildOptions) {
 
 				// Add additional user-defined Tag
 				if opts.Tag != "" {
-					tagImage(app, rev, opts.Tag)
+					if err := tagImage(app, rev, opts.Tag); err != nil {
+						pError(err.Error())
+						return
+				}
 				}
 			} else {
 				// Performing [build latest|tag latest@rev|tag latest@branch]
@@ -129,7 +138,10 @@ func Build(opts BuildOptions) {
 					pDebug("Skipping tag of %s:%s - local changes exist", app.Image, rev)
 				} else {
 					// Tag commit image
-					tagImage(app, "latest", rev)
+					if err := tagImage(app, "latest", rev); err != nil {
+						pError(err.Error())
+						return
+					}
 
 					// Tag branch image
 					branches, err := getBranches(opts.All_branches)
@@ -150,7 +162,10 @@ func Build(opts BuildOptions) {
 
 					// Add additional user-defined Tag
 					if opts.Tag != "" {
-						tagImage(app, rev, opts.Tag)
+						if err := tagImage(app, rev, opts.Tag); err != nil {
+							pError(err.Error())
+							return
+						}
 					}
 				}
 			}

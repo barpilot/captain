@@ -201,7 +201,10 @@ It works by reading captain.yaml file which describes how to build, test, push a
 	cmdPurge.Flags().BoolVarP(&options.force, "dangling", "d", false, "Remove dangling images")
 
 	captainCmd.AddCommand(cmdBuild, cmdTest, cmdPush, cmdPull, cmdVersion, cmdPurge)
-	captainCmd.Execute()
+	if err := captainCmd.Execute(); err != nil {
+		fmt.Print(err.Error())
+		return
+	}
 }
 
 func getNamespace() string {
