@@ -1,9 +1,11 @@
 package captain // import "github.com/harbur/captain"
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
+	"path"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var basedir, _ = os.Getwd()
@@ -15,12 +17,11 @@ func TestConfigFiles(t *testing.T) {
 }
 
 func TestReadConfig(t *testing.T) {
-	c := readConfig(configFile(basedir + "/test/Simple/captain.yml"))
+	c := readConfig(configFile(path.Join(basedir, "/test/Simple/captain.yml")))
 	assert.NotNil(t, c, "Should return configuration")
 }
 
 func TestNewConfig(t *testing.T) {
-	pInfo("cwd %s", basedir)
 	c := NewConfig("", basedir+"/test/Simple/captain.yml", false)
 	assert.NotNil(t, c, "Should return captain.yml configuration")
 }
@@ -34,7 +35,7 @@ func TestFilterConfigEmpty(t *testing.T) {
 	c := NewConfig("", basedir+"/test/Simple/captain.yml", false)
 	assert.Equal(t, 2, len(c.GetApps()), "Should return 2 apps")
 
-	res := c.FilterConfig("")
+	res := c.FilterConfig([]string{})
 	assert.True(t, res, "Should return true")
 	assert.Equal(t, 2, len(c.GetApps()), "Should return 2 apps")
 }
@@ -43,7 +44,7 @@ func TestFilterConfigNonExistent(t *testing.T) {
 	c := NewConfig("", basedir+"/test/Simple/captain.yml", false)
 	assert.Equal(t, 2, len(c.GetApps()), "Should return 2 apps")
 
-	res := c.FilterConfig("nonexistent")
+	res := c.FilterConfig([]string{"nonexistent"})
 	assert.False(t, res, "Should return false")
 	assert.Equal(t, 0, len(c.GetApps()), "Should return 0 apps")
 }
@@ -52,7 +53,7 @@ func TestFilterConfigWeb(t *testing.T) {
 	c := NewConfig("", basedir+"/test/Simple/captain.yml", false)
 	assert.Equal(t, 2, len(c.GetApps()), "Should return 2 apps")
 
-	c.FilterConfig("web")
+	c.FilterConfig([]string{"web"})
 	assert.Equal(t, 1, len(c.GetApps()), "Should return 1 app")
 	assert.Equal(t, "Dockerfile", c.GetApp("web").Build, "Should return web Build field")
 }

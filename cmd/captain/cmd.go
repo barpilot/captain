@@ -11,13 +11,13 @@ import (
 
 // Options that are passed by CLI are mapped here for consumption
 type Options struct {
-	debug     bool
-	force     bool
-	long_sha  bool
-	namespace string
-	config    string
-	images    []string
-	tag       string
+	debug      bool
+	force      bool
+	long_sha   bool
+	namespace  string
+	config     string
+	filterapps []string
+	tag        string
 
 	// Options to define the docker tags context
 	all_branches bool
@@ -27,8 +27,8 @@ type Options struct {
 
 var (
 	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	// commit  = "none"
+	// date    = "unknown"
 )
 
 var options Options
@@ -36,15 +36,13 @@ var options Options
 func handleCmd() {
 
 	var cmdBuild = &cobra.Command{
-		Use:   "build [image]",
+		Use:   "build",
 		Short: "Builds the docker image(s) of your repository",
 		Long:  `It will build the docker image(s) described on captain.yml in order they appear on file.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			config := captain.NewConfig(options.namespace, options.config, true)
 
-			if len(args) == 1 {
-				config.FilterConfig(args[0])
-			}
+			config.FilterConfig(options.filterapps)
 
 			buildOpts := captain.BuildOptions{
 				Config:       config,
@@ -67,9 +65,7 @@ func handleCmd() {
 		Run: func(cmd *cobra.Command, args []string) {
 			config := captain.NewConfig(options.namespace, options.config, true)
 
-			if len(args) == 1 {
-				config.FilterConfig(args[0])
-			}
+			config.FilterConfig(options.filterapps)
 
 			buildOpts := captain.BuildOptions{
 				Config:       config,
@@ -94,9 +90,7 @@ func handleCmd() {
 		Run: func(cmd *cobra.Command, args []string) {
 			config := captain.NewConfig(options.namespace, options.config, true)
 
-			if len(args) == 1 {
-				config.FilterConfig(args[0])
-			}
+			config.FilterConfig(options.filterapps)
 
 			buildOpts := captain.BuildOptions{
 				Config:       config,
@@ -121,9 +115,7 @@ func handleCmd() {
 		Run: func(cmd *cobra.Command, args []string) {
 			config := captain.NewConfig(options.namespace, options.config, true)
 
-			if len(args) == 1 {
-				config.FilterConfig(args[0])
-			}
+			config.FilterConfig(options.filterapps)
 
 			buildOpts := captain.BuildOptions{
 				Config:       config,
@@ -146,9 +138,7 @@ func handleCmd() {
 		Run: func(cmd *cobra.Command, args []string) {
 			config := captain.NewConfig(options.namespace, options.config, true)
 
-			if len(args) == 1 {
-				config.FilterConfig(args[0])
-			}
+			config.FilterConfig(options.filterapps)
 
 			buildOpts := captain.BuildOptions{
 				Config:       config,
@@ -183,6 +173,7 @@ It works by reading captain.yaml file which describes how to build, test, push a
 	captainCmd.PersistentFlags().StringVarP(&options.namespace, "namespace", "N", getNamespace(), "Set default image namespace")
 	captainCmd.PersistentFlags().BoolVarP(&color.NoColor, "no-color", "n", false, "Disable color output")
 	captainCmd.PersistentFlags().BoolVarP(&options.long_sha, "long-sha", "l", false, "Use the long git commit SHA when referencing revisions")
+	captainCmd.PersistentFlags().StringSliceVarP(&options.filterapps, "apps", "a", nil, "Filter apps")
 
 	cmdBuild.Flags().BoolVarP(&options.force, "force", "f", false, "Force build even if image is already built")
 	cmdBuild.Flags().BoolVarP(&options.all_branches, "all-branches", "B", false, "Build all branches on specific commit instead of just working branch")

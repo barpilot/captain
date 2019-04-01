@@ -9,14 +9,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // Config represents the information stored at captain.yml. It keeps information about images and unit tests.
 type Config interface {
-	FilterConfig(filter string) bool
+	FilterConfig(filter []string) bool
 	GetApp(app string) App
 	GetApps() []App
+	GetPath() string
 }
 
 type configV1 struct {
@@ -30,18 +31,33 @@ type build struct {
 	Images map[string]string
 }
 
-type config map[string]App
+type config struct {
+	Apps map[string]App `yaml:",inline"`
+	Path string         `yaml:"-"`
+}
 
-var configOrder *yaml.MapSlice
+//var configOrder *yaml.MapSlice
 
 // App struct
 type App struct {
-	Build     string
-	Image     string
-	Pre       []string
-	Post      []string
-	Test      []string
-	Build_arg map[string]string
+	Build     string            `yaml:"build"`
+	Image     string            `yaml:"image"`
+	Context   string            `yaml:"context,omitempty"`
+	Pre       []string          `yaml:"pre,omitempty"`
+	Post      []string          `yaml:"post,omitempty"`
+	Test      []string          `yaml:"test,omitempty"`
+	Build_arg map[string]string `yaml:"build_arg,omitempty"`
+}
+
+func (a *App) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type rawApp App
+	raw := rawApp{Build: "Dockerfile", Context: "."} // Put your defaults here
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	*a = App(raw)
+	return nil
 }
 
 // configFile returns the file to read the config from.
@@ -58,11 +74,12 @@ func configFile(path string) string {
 // and return the created config.
 func readConfig(filename string) *config {
 	data, err := ioutil.ReadFile(filename)
-	os.Chdir(filepath.Dir(filename))
 	if err != nil {
 		panic(StatusError{err, 74})
 	}
-	return unmarshal(data)
+	conf := unmarshal(data)
+	conf.Path = filepath.Dir(filename)
+	return conf
 }
 
 // displaySyntaxError will display more information
@@ -93,27 +110,18 @@ func displaySyntaxError(data []byte, syntaxError error) (err error) {
 // or YAML into a config object.
 func unmarshal(data []byte) *config {
 	var configV1 *configV1
-	res := yaml.Unmarshal(data, &configV1)
+	yaml.Unmarshal(data, &configV1)
 	if len(configV1.Build.Images) > 0 {
 		pError("Old %s format detected! Please check the https://github.com/harbur/captain how to upgrade", "captain.yml")
 		os.Exit(-1)
 	}
 
 	var config *config
-	res = yaml.Unmarshal(data, &config)
+	err := yaml.Unmarshal(data, &config)
 
-	if res != nil {
-		res = displaySyntaxError(data, res)
-		pError("%s", res)
-		os.Exit(InvalidCaptainYML)
-	}
-
-	// We re-import it as MapSlice to keep order of apps
-	res = yaml.Unmarshal(data, &configOrder)
-
-	if res != nil {
-		res = displaySyntaxError(data, res)
-		pError("%s", res)
+	if err != nil {
+		err = displaySyntaxError(data, err)
+		pError("%s", err)
 		os.Exit(InvalidCaptainYML)
 	}
 
@@ -133,11 +141,12 @@ func NewConfig(namespace, path string, forceOrder bool) Config {
 
 	if conf == nil {
 		pInfo("No configuration found %v - inferring values", configFile(path))
-		autoconf := make(config)
+		autoconf := config{Path: filepath.Dir(path)}
+		autoconf.Apps = make(map[string]App)
 		conf = &autoconf
 		dockerfiles := getDockerfiles(namespace)
 		for build, image := range dockerfiles {
-			autoconf[image] = App{Build: build, Image: image}
+			autoconf.Apps[image] = App{Build: build, Image: image}
 		}
 	}
 
@@ -150,65 +159,65 @@ func NewConfig(namespace, path string, forceOrder bool) Config {
 
 // GetApps returns a list of Apps
 func (c *config) GetApps() []App {
-	var cc = *c
 	var apps []App
-	if configOrder != nil {
-		for _, v := range *configOrder {
-			if val, ok := cc[v.Key.(string)]; ok {
-				apps = append(apps, val)
-			}
-		}
-	} else {
-		for _, v := range *c {
-			apps = append(apps, v)
-		}
+
+	for _, app := range c.Apps {
+		apps = append(apps, app)
 	}
 
 	return apps
 }
 
-func (c *config) FilterConfig(filter string) bool {
-	if filter != "" {
-		res := false
-		for key := range *c {
-			if key == filter {
-				res = true
-			} else {
-				delete(*c, key)
+func (c *config) FilterConfig(filters []string) bool {
+	if len(filters) == 0 {
+		return true
+	}
+	untouched := true
+	for name, _ := range c.Apps {
+		filtered := true
+		for _, filter := range filters {
+			if name == filter {
+				filtered = false
+				break
 			}
 		}
-		return res
+		if filtered {
+			untouched = false
+			delete(c.Apps, name)
+		}
 	}
-	return true
+	return untouched
 }
 
 // GetApp returns App configuration
 func (c *config) GetApp(app string) App {
-	for key, k := range *c {
-		if key == app {
-			return k
-		}
-	}
-	return App{}
+	return c.Apps[app]
+}
+
+func (c *config) GetPath() string {
+	return c.Path
 }
 
 // Global list, how can I pass it to the visitor pattern?
-var imagesMap = make(map[string]string)
+// var imagesMap = make(map[string]string)
 
 func getDockerfiles(namespace string) map[string]string {
-	filepath.Walk(".", visit(namespace))
+	var imagesMap = make(map[string]string)
+	if err := filepath.Walk(".", visit(namespace, imagesMap)); err != nil {
+		pError(err.Error())
+	}
 	return imagesMap
 }
 
-func visit(namespace string) filepath.WalkFunc {
+func visit(namespace string, images map[string]string) filepath.WalkFunc {
 	return func(path string, f os.FileInfo, err error) error {
 		// Filename is "Dockerfile" or has "Dockerfile." prefix and is not a directory
 		if (f.Name() == "Dockerfile" || strings.HasPrefix(f.Name(), "Dockerfile.")) && !f.IsDir() {
 			// Get Parent Dirname
 			absolutePath, _ := filepath.Abs(path)
 			var image = strings.ToLower(filepath.Base(filepath.Dir(absolutePath)))
-			imagesMap[path] = namespace + "/" + image + strings.ToLower(filepath.Ext(path))
-			pDebug("Located %s will be used to create %s", path, imagesMap[path])
+			images[path] = namespace + "/" + image + strings.ToLower(filepath.Ext(path))
+			pInfo("Located %s will be used to create %s", path, images[path])
 		}
 		return nil
 	}

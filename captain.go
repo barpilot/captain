@@ -73,7 +73,7 @@ func Build(opts BuildOptions) {
 			}
 
 			// Build latest image
-			res := buildImage(app, "latest", opts.Force)
+			res := buildImage(app, "latest", config.GetPath(), opts.Force)
 			if res != nil {
 				os.Exit(BuildFailed)
 			}
@@ -83,7 +83,7 @@ func Build(opts BuildOptions) {
 				if err := tagImage(app, "latest", opts.Tag); err != nil {
 					pError(err.Error())
 					return
-			}
+				}
 			}
 		} else {
 			// Skip build if there are no local changes and the commit is already built
@@ -119,7 +119,7 @@ func Build(opts BuildOptions) {
 					if err := tagImage(app, rev, opts.Tag); err != nil {
 						pError(err.Error())
 						return
-				}
+					}
 				}
 			} else {
 				// Performing [build latest|tag latest@rev|tag latest@branch]
@@ -130,7 +130,7 @@ func Build(opts BuildOptions) {
 				}
 
 				// Build latest image
-				res := buildImage(app, "latest", opts.Force)
+				res := buildImage(app, "latest", config.GetPath(), opts.Force)
 				if res != nil {
 					os.Exit(BuildFailed)
 				}

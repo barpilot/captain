@@ -3,12 +3,11 @@ package captain // import "github.com/harbur/captain"
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
-
-const defaultEndpoint = "unix:///var/run/docker.sock"
 
 var client *docker.Client
 
@@ -24,14 +23,13 @@ type BuildArgSet struct {
 	slice []docker.BuildArg
 }
 
-func buildImage(app App, tag string, force bool) error {
+func buildImage(app App, tag string, pathConfig string, force bool) error {
 	pInfo("Building image %s:%s", app.Image, tag)
 
 	// Nasty issue with CircleCI https://github.com/docker/docker/issues/4897
 	if os.Getenv("CIRCLECI") == "true" {
 		pInfo("Running at %s environment...", "CIRCLECI")
-		execute("docker", "build", "-t", app.Image+":"+tag, filepath.Dir(app.Build))
-		return nil
+		return execute("docker", "build", "-t", app.Image+":"+tag, filepath.Dir(app.Build))
 	}
 
 	// Create BuildArg set
@@ -41,15 +39,24 @@ func buildImage(app App, tag string, force bool) error {
 			buildArgSet.slice = append(buildArgSet.slice, docker.BuildArg{Name: k, Value: arg})
 		}
 	}
+	contextDir := path.Join(pathConfig, app.Context)
+	pInfo(contextDir)
+	pInfo(path.Join(pathConfig, app.Build))
+	Dockerfile, err := filepath.Rel(contextDir, path.Join(pathConfig, app.Build))
+	if err != nil {
+		pError("%s", err)
+		return err
+	}
+
 	opts := docker.BuildImageOptions{
 		Name:                app.Image + ":" + tag,
-		Dockerfile:          filepath.Base(app.Build),
+		Dockerfile:          Dockerfile,
 		NoCache:             force,
 		SuppressOutput:      false,
 		RmTmpContainer:      true,
 		ForceRmTmpContainer: true,
 		OutputStream:        os.Stdout,
-		ContextDir:          filepath.Dir(app.Build),
+		ContextDir:          contextDir,
 		BuildArgs:           buildArgSet.slice,
 	}
 
@@ -59,9 +66,9 @@ func buildImage(app App, tag string, force bool) error {
 		opts.AuthConfigs = *dockercfg
 	}
 
-	err := client.BuildImage(opts)
+	err = client.BuildImage(opts)
 	if err != nil {
-		fmt.Printf("%s", err)
+		pError("%s", err)
 	}
 	return err
 }

@@ -1,7 +1,6 @@
 package captain // import "github.com/harbur/captain"
 
 import (
-	"fmt"
 	"os"
 
 	git "gopkg.in/src-d/go-git.v4"
@@ -14,9 +13,9 @@ func getRepository() (*git.Repository, error) {
 		return nil, err
 	}
 
-	pInfo(dir)
+	opt := &git.PlainOpenOptions{DetectDotGit: true}
 
-	return git.PlainOpen(dir)
+	return git.PlainOpenWithOptions(dir, opt)
 }
 
 func getRevision(longSha bool) (string, error) {
@@ -25,17 +24,11 @@ func getRevision(longSha bool) (string, error) {
 		return "", err
 	}
 
-	h, err := r.ResolveRevision(plumbing.Revision("HEAD"))
-	return h.String(), err
-
-	// params := []string{"rev-parse"}
-	// if !long_sha {
-	// 	params = append(params, "--short")
-	// }
-
-	// params = append(params, "HEAD")
-	// res, _ := oneliner("git", params...)
-	// return "", res
+	h, err := getCurrentCommitFromRepository(r)
+	if longSha || err != nil {
+		return h, err
+	}
+	return h[:7], err
 }
 
 func getBranches(all_branches bool) ([]string, error) {
@@ -47,75 +40,25 @@ func getBranches(all_branches bool) ([]string, error) {
 		return labels, err
 	}
 
-	tagrefs, err := r.Tags()
+	branches, err := getCurrentBranchesFromRepository(r)
 	if err != nil {
 		return labels, err
 	}
 
-	err = tagrefs.ForEach(func(t *plumbing.Reference) error {
-		labels = append(labels, t.Name().Short())
-		fmt.Println(t)
-		return nil
-	})
-	if err != nil {
-		return labels, err
+	if all_branches {
+		for _, branch := range branches {
+			labels = append(labels, branch)
+		}
+	} else {
+		labels = append(labels, branches[0])
 	}
 
-	brancherefs, err := r.Branches()
-
-	err = brancherefs.ForEach(func(t *plumbing.Reference) error {
-		labels = append(labels, t.Name().Short())
-		fmt.Println(t)
-		return nil
-	})
-	if err != nil {
-		return labels, err
+	tags, err := getCurrentTagsFromRepository(r)
+	for _, tag := range tags {
+		labels = append(labels, tag)
 	}
 
-	return labels, nil
-
-	// branches_str, _ := oneliner("git", "rev-parse", "--symbolic-full-name", "--abbrev-ref", "HEAD")
-	// if all_branches {
-	// 	branches_str, _ = oneliner("git", "branch", "--no-column", "--contains", "HEAD")
-	// }
-
-	// var branches = make([]string, 5)
-	// if branches_str != "" {
-	// 	// Remove asterisk from branches list
-	// 	r := regexp.MustCompile("[\\* ] ")
-	// 	branches_str = r.ReplaceAllString(branches_str, "")
-	// 	branches = strings.Split(branches_str, "\n")
-
-	// 	// Branches list is separated by spaces. Let's put it in an array
-	// 	labels = append(labels, branches...)
-	// }
-
-	// tags_str, _ := oneliner("git", "tag", "--points-at", "HEAD")
-
-	// if tags_str != "" {
-	// 	tags := strings.Split(tags_str, "\n")
-	// 	pDebug("Active branches %s and tags %s", branches, tags)
-	// 	// Git tag list is separated by multi-lines. Let's put it in an array
-	// 	labels = append(labels, tags...)
-	// }
-
-	// for key := range labels {
-	// 	// Remove start of "heads/origin" if exist
-	// 	r := regexp.MustCompile("^heads\\/origin\\/")
-	// 	labels[key] = r.ReplaceAllString(labels[key], "")
-
-	// 	// Remove start of "remotes/origin" if exist
-	// 	r = regexp.MustCompile("^remotes\\/origin\\/")
-	// 	labels[key] = r.ReplaceAllString(labels[key], "")
-
-	// 	// Replace all "/" with "."
-	// 	labels[key] = strings.Replace(labels[key], "/", ".", -1)
-
-	// 	// Replace all "~" with "."
-	// 	labels[key] = strings.Replace(labels[key], "~", ".", -1)
-	// }
-
-	// return nil, labels
+	return labels, err
 }
 
 func isDirty() bool {
@@ -147,4 +90,75 @@ func isGit() bool {
 		return false
 	}
 	return true
+}
+
+// Thanks King'ori Maina @itskingori
+// https://github.com/src-d/go-git/issues/1030#issuecomment-443679681
+
+func getCurrentBranchesFromRepository(repository *git.Repository) ([]string, error) {
+	var currentBranchesNames []string
+
+	branchRefs, err := repository.Branches()
+	if err != nil {
+		return currentBranchesNames, err
+	}
+
+	headRef, err := repository.Head()
+	if err != nil {
+		return currentBranchesNames, err
+	}
+
+	err = branchRefs.ForEach(func(branchRef *plumbing.Reference) error {
+		if branchRef.Hash() == headRef.Hash() {
+			currentBranchesNames = append(currentBranchesNames, branchRef.Name().Short())
+
+			return nil
+		}
+
+		return nil
+	})
+	if err != nil {
+		return currentBranchesNames, err
+	}
+
+	return currentBranchesNames, nil
+}
+
+func getCurrentCommitFromRepository(repository *git.Repository) (string, error) {
+	headRef, err := repository.Head()
+	if err != nil {
+		return "", err
+	}
+	headSha := headRef.Hash().String()
+
+	return headSha, nil
+}
+
+func getCurrentTagsFromRepository(repository *git.Repository) ([]string, error) {
+	var currentTagsNames []string
+
+	tagRefs, err := repository.Branches()
+	if err != nil {
+		return currentTagsNames, err
+	}
+
+	headRef, err := repository.Head()
+	if err != nil {
+		return currentTagsNames, err
+	}
+
+	err = tagRefs.ForEach(func(tagRef *plumbing.Reference) error {
+		if tagRef.Hash() == headRef.Hash() {
+			currentTagsNames = append(currentTagsNames, tagRef.Name().Short())
+
+			return nil
+		}
+
+		return nil
+	})
+	if err != nil {
+		return currentTagsNames, err
+	}
+
+	return currentTagsNames, nil
 }
