@@ -7,5 +7,5 @@ import (
 var colorPrefix = color.New(color.FgWhite, color.Bold).SprintFunc()
 var colorDebug = color.New(color.FgBlue).SprintFunc()
 var colorInfo = color.New(color.FgGreen).SprintFunc()
-var colorWarn = color.New(color.FgYellow).SprintFunc()
+var colorWarn = color.New(color.FgYellow).SprintFunc() //nolint:deadcode,varcheck,unused
 var colorErr = color.New(color.FgRed).SprintFunc()

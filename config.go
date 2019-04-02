@@ -173,7 +173,7 @@ func (c *config) FilterConfig(filters []string) bool {
 		return true
 	}
 	untouched := true
-	for name, _ := range c.Apps {
+	for name := range c.Apps {
 		filtered := true
 		for _, filter := range filters {
 			if name == filter {

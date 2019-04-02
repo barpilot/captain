@@ -11,7 +11,7 @@ import (
 
 // Options that are passed by CLI are mapped here for consumption
 type Options struct {
-	debug      bool
+	// debug      bool
 	force      bool
 	long_sha   bool
 	namespace  string

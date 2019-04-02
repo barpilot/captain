@@ -40,8 +40,6 @@ func buildImage(app App, tag string, pathConfig string, force bool) error {
 		}
 	}
 	contextDir := path.Join(pathConfig, app.Context)
-	pInfo(contextDir)
-	pInfo(path.Join(pathConfig, app.Build))
 	Dockerfile, err := filepath.Rel(contextDir, path.Join(pathConfig, app.Build))
 	if err != nil {
 		pError("%s", err)
@@ -111,6 +109,7 @@ func getImages(app App) []docker.APIImages {
 }
 
 func imageExist(app App, tag string) bool {
+
 	repo := app.Image + ":" + tag
 	image, _ := client.InspectImage(repo)
 	return image != nil

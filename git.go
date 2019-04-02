@@ -47,9 +47,7 @@ func getBranches(all_branches bool) ([]string, error) {
 	}
 
 	if all_branches {
-		for _, branch := range branches {
-			labels = append(labels, branch)
-		}
+		labels = append(labels, branches...)
 	} else if len(branches) > 0 {
 		labels = append(labels, branches[0])
 	} else {
@@ -57,9 +55,7 @@ func getBranches(all_branches bool) ([]string, error) {
 	}
 
 	tags, err := getCurrentTagsFromRepository(r)
-	for _, tag := range tags {
-		labels = append(labels, tag)
-	}
+	labels = append(labels, tags...)
 
 	return labels, err
 }
@@ -89,10 +85,7 @@ func isDirty() bool {
 
 func isGit() bool {
 	_, err := getRepository()
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // Thanks King'ori Maina @itskingori
