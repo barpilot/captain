@@ -2,7 +2,7 @@ workflow "Test" {
   on = "push"
   resolves = [
     "golangci-lint",
-    "travis",
+    "cedrickring/golang-action/go1.12@1.2.0",
   ]
 }
 
@@ -26,13 +26,15 @@ action "goreleaser" {
 }
 
 action "golangci-lint" {
-  needs = ["travis"]
+  needs = [
+    "cedrickring/golang-action/go1.12@1.2.0",
+  ]
   uses = "docker://golangci/golangci-lint"
   runs = "/usr/bin/golangci-lint"
   args = "run"
 }
 
-action "travis" {
-  uses = "travis-ci/actions@master"
-  secrets = ["TRAVIS_TOKEN"]
+action "cedrickring/golang-action/go1.12@1.2.0" {
+  uses = "cedrickring/golang-action/go1.12@1.2.0"
+  args = "go build -o captain ./cmd/captain/"
 }
