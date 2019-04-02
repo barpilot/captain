@@ -32,9 +32,15 @@ action "golangci-lint" {
   uses = "docker://golangci/golangci-lint"
   runs = "/usr/bin/golangci-lint"
   args = "run"
+  env = {
+    GO111MODULE = "on"
+  }
 }
 
 action "cedrickring/golang-action/go1.12@1.2.0" {
   uses = "cedrickring/golang-action/go1.12@1.2.0"
-  args = "go mod download"
+  args = "go build -o captain ./cmd/captain"
+  env = {
+    GO111MODULE = "on"
+  }
 }
