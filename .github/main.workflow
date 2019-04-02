@@ -1,6 +1,9 @@
 workflow "Test" {
   on = "push"
-  resolves = ["build test", "golangci-lint"]
+  resolves = [
+    "golangci-lint",
+    "travis",
+  ]
 }
 
 workflow "gorelease" {
@@ -22,13 +25,14 @@ action "goreleaser" {
   needs = ["Docker Registry"]
 }
 
-action "build test" {
-  uses = "cedrickring/golang-action/go1.12@1.2.0"
-}
-
 action "golangci-lint" {
-  needs = "build test"
+  needs = ["travis"]
   uses = "docker://golangci/golangci-lint"
   runs = "/usr/bin/golangci-lint"
   args = "run"
+}
+
+action "travis" {
+  uses = "travis-ci/actions@master"
+  secrets = ["TRAVIS_TOKEN"]
 }
