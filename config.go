@@ -150,10 +150,6 @@ func NewConfig(namespace, path string, forceOrder bool) Config {
 		}
 	}
 
-	var err error
-	if err != nil {
-		panic(StatusError{err, 78})
-	}
 	return conf
 }
 
