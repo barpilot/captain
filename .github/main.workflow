@@ -26,12 +26,9 @@ action "goreleaser" {
 }
 
 action "golangci-lint" {
-  needs = [
-    "cedrickring/golang-action/go1.12@1.2.0",
-  ]
   uses = "docker://golangci/golangci-lint"
   runs = "/usr/bin/golangci-lint"
-  args = "run"
+  args = "run --deadline 1h"
   env = {
     GO111MODULE = "on"
   }
