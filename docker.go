@@ -42,11 +42,7 @@ func buildImage(app App, tag string, pathConfig string, force bool) error {
 	contextDir := path.Join(pathConfig, app.Context)
 	pInfo(contextDir)
 	pInfo(path.Join(pathConfig, app.Build))
-	Dockerfile, err := filepath.Rel(contextDir, path.Join(pathConfig, app.Build))
-	if err != nil {
-		pError("%s", err)
-		return err
-	}
+	Dockerfile := app.Build
 
 	opts := docker.BuildImageOptions{
 		Name:                app.Image + ":" + tag,
@@ -66,11 +62,12 @@ func buildImage(app App, tag string, pathConfig string, force bool) error {
 		opts.AuthConfigs = *dockercfg
 	}
 
-	err = client.BuildImage(opts)
-	if err != nil {
+	if err := client.BuildImage(opts); err != nil {
 		pError("%s", err)
+		return err
 	}
-	return err
+
+	return nil
 }
 
 func pushImage(image string, version string) error {

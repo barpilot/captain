@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/harbur/captain/pkg/depgraph"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -46,6 +47,7 @@ type App struct {
 	Pre       []string          `yaml:"pre,omitempty"`
 	Post      []string          `yaml:"post,omitempty"`
 	Test      []string          `yaml:"test,omitempty"`
+	Wants     []string          `yaml:"wants,omitempty"`
 	Build_arg map[string]string `yaml:"build_arg,omitempty"`
 }
 
@@ -151,6 +153,7 @@ func NewConfig(namespace, path string, forceOrder bool) Config {
 	}
 
 	var err error
+
 	if err != nil {
 		panic(StatusError{err, 78})
 	}
@@ -159,10 +162,20 @@ func NewConfig(namespace, path string, forceOrder bool) Config {
 
 // GetApps returns a list of Apps
 func (c *config) GetApps() []App {
+	var workingGraph depgraph.Graph
 	var apps []App
 
-	for _, app := range c.Apps {
-		apps = append(apps, app)
+	for name, app := range c.Apps {
+		workingGraph = append(workingGraph, depgraph.NewNode(name, app.Wants...))
+	}
+	graph, err := depgraph.ResolveGraph(workingGraph)
+
+	if err != nil {
+		return apps
+	}
+
+	for _, node := range graph {
+		apps = append(apps, c.Apps[node.Name])
 	}
 
 	return apps
