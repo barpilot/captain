@@ -1,0 +1,41 @@
+name: release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    name: Goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+      - name: Add snapcraft to PATH
+        run: sudo ln -fs /snap/bin/snapcraft /usr/local/bin/snapcraft
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          args: release --snapshot
+
+      - uses: azure/docker-login@v1
+        with:
+          username: "guilhem"
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Docker push
+        run: |
+          docker push barpilot/captain
+          docker push barpilot/captain:$(echo ${GITHUB_SHA} | cut -c1-8)
+
+      - name: Snapcraft login
+        run: echo "${{ secrets.SNAPCRAFT_TOKEN }}" | snapcraft login --with -
+      - name: Release snap
+        run: snapcraft push dist/*.snap --release edge
